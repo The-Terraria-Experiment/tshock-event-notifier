@@ -2,6 +2,10 @@
 
 EventNotifier is a platform-agnostic TShock 6 plugin scaffold that emits important server events as HTTP POST requests to a single endpoint (for example, AWS API Gateway).
 
+DISCLAIMER: This plugin is almost entirely created by AI. Although it has been tested and used, most of the source code has not been thoroughly human-reviewed. Use with caution.
+
+This plugin is based largely off of [TerraCord](https://github.com/FragLand/terracord), which appears to have been built for TShock 4.
+
 ## What this scaffold includes
 
 - **Schema-versioned payload envelope** (`schemaVersion`) for API contract evolution
