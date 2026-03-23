@@ -1,0 +1,31 @@
+## Rider
+.idea/
+*.sln.iml
+
+## Build outputs
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
+## Test results
+TestResults/
+
+## NuGet
+*.nupkg
+*.nuget.props
+*.nuget.targets
+
+## User-specific
+*.user
+*.userosscache
+*.sln.docstates
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Local configuration
+tshock/event-notifier.json
+
