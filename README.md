@@ -95,6 +95,7 @@ On first run, plugin creates `tshock/event-notifier.json`:
     "ipAddress": "127.0.0.1",
     "isLoggedIn": true
   },
+  "playerDataSource": "live",
   "eventData": {
     "who": 5
   }
@@ -144,6 +145,7 @@ dotnet build .\EventNotifier.sln
 - **Graceful retry**: single retry with configurable backoff; failures logged but don't stop the server
 - **Schema versioning**: payload `schemaVersion` allows safe API evolution
 - **Verbose context**: every event includes full server + player state for recipient systems
+- **Player data provenance**: `playerDataSource` (`live` / `cached` / `unknown`) tells recipients whether `player` came from a live lookup or a last-known snapshot, so degraded rows (e.g. a race on disconnect) can be flagged instead of trusted blindly
 - **Configuration-first**: hook toggles make it trivial to silence noisy events (e.g., chat)
 - **Well-documented**: public APIs have XML doc comments for IDE/doc generation
 

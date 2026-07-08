@@ -14,8 +14,9 @@ public sealed class HookRegistrar
 {
     private readonly TerrariaPlugin _plugin;
     private readonly Func<NotifierSettings> _settingsProvider;
-    private readonly Action<string, TSPlayer?, Dictionary<string, object?>> _publish;
+    private readonly Action<string, TSPlayer?, int, Dictionary<string, object?>> _publish;
     private readonly Action _reloadConfig;
+    private readonly Action<int> _forgetPlayerSlot;
 
     /// <summary>
     /// Creates a hook registrar bound to a plugin instance and publisher delegate.
@@ -23,13 +24,15 @@ public sealed class HookRegistrar
     public HookRegistrar(
         TerrariaPlugin plugin,
         Func<NotifierSettings> settingsProvider,
-        Action<string, TSPlayer?, Dictionary<string, object?>> publish,
-        Action reloadConfig)
+        Action<string, TSPlayer?, int, Dictionary<string, object?>> publish,
+        Action reloadConfig,
+        Action<int> forgetPlayerSlot)
     {
         _plugin = plugin;
         _settingsProvider = settingsProvider;
         _publish = publish;
         _reloadConfig = reloadConfig;
+        _forgetPlayerSlot = forgetPlayerSlot;
     }
 
     /// <summary>
@@ -62,13 +65,17 @@ public sealed class HookRegistrar
 
     private void OnJoin(JoinEventArgs args)
     {
+        // A new connection is claiming this slot: drop any stale snapshot left
+        // behind by a previous occupant before anything reads the cache again.
+        _forgetPlayerSlot(args.Who);
+
         if (!_settingsProvider().Events.Join)
         {
             return;
         }
 
         var player = SafePlayerLookup(args.Who);
-        _publish(EventType.PlayerJoin, player, new Dictionary<string, object?>
+        _publish(EventType.PlayerJoin, player, args.Who, new Dictionary<string, object?>
         {
             ["who"] = args.Who
         });
@@ -76,16 +83,20 @@ public sealed class HookRegistrar
 
     private void OnLeave(LeaveEventArgs args)
     {
-        if (!_settingsProvider().Events.Leave)
+        var player = SafePlayerLookup(args.Who);
+
+        if (_settingsProvider().Events.Leave)
         {
-            return;
+            _publish(EventType.PlayerLeave, player, args.Who, new Dictionary<string, object?>
+            {
+                ["who"] = args.Who
+            });
         }
 
-        var player = SafePlayerLookup(args.Who);
-        _publish(EventType.PlayerLeave, player, new Dictionary<string, object?>
-        {
-            ["who"] = args.Who
-        });
+        // Always vacate the slot's cache entry once the player has left, even if
+        // leave events are disabled, so a slot reused by a new connection never
+        // inherits this player's identity.
+        _forgetPlayerSlot(args.Who);
     }
 
     private void OnWorldSave(WorldSaveEventArgs args)
@@ -95,7 +106,7 @@ public sealed class HookRegistrar
             return;
         }
 
-        _publish(EventType.WorldSave, null, new Dictionary<string, object?>
+        _publish(EventType.WorldSave, null, -1, new Dictionary<string, object?>
         {
             ["worldId"] = Main.worldID
         });
@@ -108,7 +119,7 @@ public sealed class HookRegistrar
             return;
         }
 
-        _publish(EventType.PlayerChat, args.Player, new Dictionary<string, object?>
+        _publish(EventType.PlayerChat, args.Player, -1, new Dictionary<string, object?>
         {
             ["rawText"] = args.RawText,
             ["formattedText"] = args.TShockFormattedText
@@ -122,7 +133,7 @@ public sealed class HookRegistrar
             return;
         }
 
-        _publish(EventType.PlayerDeath, args.Player, new Dictionary<string, object?>
+        _publish(EventType.PlayerDeath, args.Player, args.PlayerId, new Dictionary<string, object?>
         {
             ["playerId"] = args.PlayerId,
             ["damage"] = args.Damage,
@@ -139,7 +150,7 @@ public sealed class HookRegistrar
             return;
         }
 
-        _publish(EventType.PlayerSpawn, args.Player, new Dictionary<string, object?>
+        _publish(EventType.PlayerSpawn, args.Player, args.PlayerId, new Dictionary<string, object?>
         {
             ["playerId"] = args.PlayerId,
             ["spawnX"] = args.SpawnX,
@@ -161,7 +172,7 @@ public sealed class HookRegistrar
             return;
         }
 
-        _publish(EventType.ServerReload, args.Player, new Dictionary<string, object?>
+        _publish(EventType.ServerReload, args.Player, -1, new Dictionary<string, object?>
         {
             ["by"] = args.Player?.Name
         });

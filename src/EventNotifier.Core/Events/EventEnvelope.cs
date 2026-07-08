@@ -41,6 +41,12 @@ public sealed class EventEnvelope
     public PlayerInfo? Player { get; set; }
 
     /// <summary>
+    /// How <see cref="Player"/> was obtained: "live", "cached", or "unknown".
+    /// Null for events with no player data at all.
+    /// </summary>
+    public string? PlayerDataSource { get; set; }
+
+    /// <summary>
     /// Event-specific details.
     /// </summary>
     public Dictionary<string, object?> EventData { get; set; } = new(StringComparer.Ordinal);
