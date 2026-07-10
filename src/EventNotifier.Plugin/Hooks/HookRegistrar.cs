@@ -17,6 +17,7 @@ public sealed class HookRegistrar
     private readonly Action<string, TSPlayer?, int, Dictionary<string, object?>> _publish;
     private readonly Action _reloadConfig;
     private readonly Action<int> _forgetPlayerSlot;
+    private readonly Action<TSPlayer?, int> _observePlayer;
 
     /// <summary>
     /// Creates a hook registrar bound to a plugin instance and publisher delegate.
@@ -26,13 +27,15 @@ public sealed class HookRegistrar
         Func<NotifierSettings> settingsProvider,
         Action<string, TSPlayer?, int, Dictionary<string, object?>> publish,
         Action reloadConfig,
-        Action<int> forgetPlayerSlot)
+        Action<int> forgetPlayerSlot,
+        Action<TSPlayer?, int> observePlayer)
     {
         _plugin = plugin;
         _settingsProvider = settingsProvider;
         _publish = publish;
         _reloadConfig = reloadConfig;
         _forgetPlayerSlot = forgetPlayerSlot;
+        _observePlayer = observePlayer;
     }
 
     /// <summary>
@@ -69,12 +72,17 @@ public sealed class HookRegistrar
         // behind by a previous occupant before anything reads the cache again.
         _forgetPlayerSlot(args.Who);
 
+        var player = SafePlayerLookup(args.Who);
+
+        // Prime the cache from this live lookup regardless of whether join events
+        // are enabled, so leave events still have a snapshot to fall back to.
+        _observePlayer(player, args.Who);
+
         if (!_settingsProvider().Events.Join)
         {
             return;
         }
 
-        var player = SafePlayerLookup(args.Who);
         _publish(EventType.PlayerJoin, player, args.Who, new Dictionary<string, object?>
         {
             ["who"] = args.Who
@@ -114,12 +122,18 @@ public sealed class HookRegistrar
 
     private void OnPlayerChat(PlayerChatEventArgs args)
     {
+        var fallbackIndex = args.Player?.Index ?? -1;
+
+        // Chat almost always carries a fully-populated live player; use every
+        // occurrence to refresh the cache regardless of the chat-event toggle.
+        _observePlayer(args.Player, fallbackIndex);
+
         if (!_settingsProvider().Events.Chat)
         {
             return;
         }
 
-        _publish(EventType.PlayerChat, args.Player, -1, new Dictionary<string, object?>
+        _publish(EventType.PlayerChat, args.Player, fallbackIndex, new Dictionary<string, object?>
         {
             ["rawText"] = args.RawText,
             ["formattedText"] = args.TShockFormattedText
@@ -128,6 +142,8 @@ public sealed class HookRegistrar
 
     private void OnKillMe(object? sender, GetDataHandlers.KillMeEventArgs args)
     {
+        _observePlayer(args.Player, args.PlayerId);
+
         if (!_settingsProvider().Events.Death)
         {
             return;
@@ -145,6 +161,8 @@ public sealed class HookRegistrar
 
     private void OnPlayerSpawn(object? sender, GetDataHandlers.SpawnEventArgs args)
     {
+        _observePlayer(args.Player, args.PlayerId);
+
         if (!_settingsProvider().Events.Spawn)
         {
             return;

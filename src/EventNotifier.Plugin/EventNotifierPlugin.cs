@@ -63,7 +63,7 @@ public sealed class EventNotifierPlugin : TerrariaPlugin
         var sender = new HttpNotificationSender(_httpClient, _settings);
         _queue = new NotificationDispatchQueue(sender, _settings.QueueCapacity, LogInfo, LogWarn);
 
-        _hookRegistrar = new HookRegistrar(this, () => _settings, PublishEvent, ReloadSettings, ForgetPlayerSlot);
+        _hookRegistrar = new HookRegistrar(this, () => _settings, PublishEvent, ReloadSettings, ForgetPlayerSlot, ObservePlayer);
         _hookRegistrar.Register();
 
         var commands = new NotifierCommands(() => _settings, ReloadSettings, BuildStatusMessage, SendTestEvent);
@@ -160,6 +160,25 @@ public sealed class EventNotifierPlugin : TerrariaPlugin
         if (index >= 0)
         {
             _playerCache.Forget(index);
+        }
+    }
+
+    /// <summary>
+    /// Opportunistically snapshots a live player into the cache. Called unconditionally
+    /// from hooks that have a live player reference, independent of whether that hook's
+    /// event is actually published, so cache priming isn't gated by per-hook toggles.
+    /// </summary>
+    private void ObservePlayer(TSPlayer? player, int fallbackIndex)
+    {
+        if (fallbackIndex < 0)
+        {
+            return;
+        }
+
+        var info = EventFactory.BuildPlayerInfo(player);
+        if (info is not null)
+        {
+            _playerCache.Remember(fallbackIndex, info);
         }
     }
 
