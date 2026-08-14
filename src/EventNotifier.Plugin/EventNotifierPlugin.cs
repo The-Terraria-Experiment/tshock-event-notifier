@@ -44,7 +44,7 @@ public sealed class EventNotifierPlugin : TerrariaPlugin
     /// <summary>
     /// Plugin semantic version.
     /// </summary>
-    public override Version Version => new(0, 1, 0);
+    public override Version Version => new(1, 0, 0);
 
     /// <summary>
     /// Initializes a new plugin instance.

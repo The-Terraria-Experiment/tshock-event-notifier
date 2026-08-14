@@ -79,7 +79,7 @@ On first run, plugin creates `tshock/event-notifier.json`:
   "eventType": "player.join",
   "occurredAtUtc": "2026-03-21T12:34:56.789+00:00",
   "correlationId": "ec377fc0ab7f468a84f6e374ef41fce8",
-  "pluginVersion": "0.1.0",
+  "pluginVersion": "1.0.0",
   "server": {
     "name": "My TShock Server",
     "worldName": "MyWorld",
